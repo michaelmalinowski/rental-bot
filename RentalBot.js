@@ -15,7 +15,7 @@ class RentalBot{
         this.replyEmail = null;
         this.replyMessage = null;
 
-        this.mostRecentFlatId = null;
+        this.mostRecentFlatIds = [];
     }
 
     setReplyInfo(replyInfo) {
@@ -25,7 +25,7 @@ class RentalBot{
     }
 
     run() {
-        this.filterListings(false)
+        this.filterListings(false, "20")
         setInterval(() => {
             this.filterListings()
             let date = new Date()
@@ -33,42 +33,34 @@ class RentalBot{
         }, this.listingScanInterval * 60 * 1000)
     }
 
-    async filterListings(isEmailing=true) {
-        let listingsObject = await this.getListings();
+    async filterListings(isEmailing=true, listingCount="15") {
+        let listingsObject = await this.getListings(listingCount);
         if (listingsObject == null) {
             return;
         }
         
         let listingsList = listingsObject.listings;
-        let lastSeen = 0;
+        let fillFlag = false;
         listingsList.some(element => {
             let flat = element.listing;
-            if (this.mostRecentFlatId == null) {
-                return true;
+            if (this.mostRecentFlatIds.length == 0 || fillFlag) {
+                fillFlag = true;
+                this.mostRecentFlatIds.push(flat.id);
+                console.log(`Adding ${flat.title} to recent flats`);
             }
 
-            if (this.mostRecentFlatId == flat.id) {
-                return true;
+            if (this.mostRecentFlatIds.indexOf(flat.id) < 0) {
+                this.mostRecentFlatIds.push(flat.id);
+                console.log(`Adding ${flat.title} to recent flats`);
+                if (isEmailing) {
+                    console.log(`Attempting to email flat: ${flat.title}`);
+                    this.sendEmailReply(flat.id, flat.title)
+                }
             }
-            ++lastSeen;
         });
-
-        this.mostRecentFlatId = listingsList[0].listing.id;
-
-        if (lastSeen == listingsList.length) {
-            return
-        }
-        listingsList.forEach(element => {
-            let flat = element.listing;
-            if (isEmailing && lastSeen > 0) {
-                console.log(`Attempting to email flat: ${flat.title}`);
-                this.sendEmailReply(flat.id, flat.title)
-            }
-            --lastSeen;
-        })
     }
     
-    async getListings() {
+    async getListings(listingCount="10") {
         try {
             let response = await fetch("https://gateway.daft.ie/old/v1/listings", {
             "headers": {
@@ -89,7 +81,7 @@ class RentalBot{
                 "Referer": "https://www.daft.ie/",
                 "Referrer-Policy": "strict-origin-when-cross-origin"
             },
-            "body": "{\"section\":\"residential-to-rent\",\"filters\":[{\"values\":[\"published\"],\"name\":\"adState\"}],\"andFilters\":[],\"ranges\":[{\"from\":\"\",\"to\":\"2300\",\"name\":\"rentalPrice\"}],\"paging\":{\"from\":\"0\",\"pageSize\":\"20\"},\"geoFilter\":{\"storedShapeIds\":[\"65\",\"66\",\"68\",\"70\",\"73\"],\"geoSearchType\":\"STORED_SHAPES\"},\"terms\":\"\",\"sort\":\"publishDateDesc\"}",
+            "body": `{\"section\":\"residential-to-rent\",\"filters\":[{\"values\":[\"published\"],\"name\":\"adState\"}],\"andFilters\":[],\"ranges\":[{\"from\":\"1200\",\"to\":\"2300\",\"name\":\"rentalPrice\"}],\"paging\":{\"from\":\"0\",\"pageSize\":\"${listingCount}\"},\"geoFilter\":{\"storedShapeIds\":[\"65\",\"66\",\"68\",\"70\",\"73\"],\"geoSearchType\":\"STORED_SHAPES\"},\"terms\":\"\",\"sort\":\"publishDateDesc\"}`,
             "method": "POST"
             });
 
