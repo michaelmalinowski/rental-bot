@@ -1,6 +1,10 @@
 const fetch = (...args) =>
   import('node-fetch').then(({ default: fetch }) => fetch(...args));
 const puppeteer = require("puppeteer");
+const fs = require('fs')
+const fsasync = require('fs/promises')
+const path = require('path')
+const axios = require('axios')
 
 
 class RentalBot{
@@ -15,7 +19,15 @@ class RentalBot{
         this.replyEmail = null;
         this.replyMessage = null;
 
+<<<<<<< HEAD
         this.mostRecentFlatIds = [];
+
+        if (!fs.existsSync(`photos`)){
+            fs.mkdirSync(`photos/`);
+        }
+=======
+        this.mostRecentFlatId = null;
+>>>>>>> parent of b1d3758... Update filter logic
     }
 
     setReplyInfo(replyInfo) {
@@ -25,7 +37,7 @@ class RentalBot{
     }
 
     run() {
-        this.filterListings(false, "20")
+        this.filterListings(false)
         setInterval(() => {
             this.filterListings()
             let date = new Date()
@@ -33,34 +45,53 @@ class RentalBot{
         }, this.listingScanInterval * 60 * 1000)
     }
 
-    async filterListings(isEmailing=true, listingCount="15") {
-        let listingsObject = await this.getListings(listingCount);
+    async filterListings(isEmailing=true) {
+        let listingsObject = await this.getListings();
         if (listingsObject == null) {
             return;
         }
         
         let listingsList = listingsObject.listings;
-        let fillFlag = false;
+        let lastSeen = 0;
         listingsList.some(element => {
             let flat = element.listing;
-            if (this.mostRecentFlatIds.length == 0 || fillFlag) {
-                fillFlag = true;
-                this.mostRecentFlatIds.push(flat.id);
-                console.log(`Adding ${flat.title} to recent flats`);
+            if (this.mostRecentFlatId == null) {
+                return true;
             }
 
+<<<<<<< HEAD
             if (this.mostRecentFlatIds.indexOf(flat.id) < 0) {
                 this.mostRecentFlatIds.push(flat.id);
                 console.log(`Adding ${flat.title} to recent flats`);
                 if (isEmailing) {
                     console.log(`Attempting to email flat: ${flat.title}`);
-                    this.sendEmailReply(flat.id, flat.title)
+                    this.sendEmailReply(flat.id, flat.title);
+                    this.getPhotoAndSellInfo(flat);
                 }
+=======
+            if (this.mostRecentFlatId == flat.id) {
+                return true;
+>>>>>>> parent of b1d3758... Update filter logic
             }
+            ++lastSeen;
         });
+
+        this.mostRecentFlatId = listingsList[0].listing.id;
+
+        if (lastSeen == listingsList.length) {
+            return
+        }
+        listingsList.forEach(element => {
+            let flat = element.listing;
+            if (isEmailing && lastSeen > 0) {
+                console.log(`Attempting to email flat: ${flat.title}`);
+                this.sendEmailReply(flat.id, flat.title)
+            }
+            --lastSeen;
+        })
     }
     
-    async getListings(listingCount="10") {
+    async getListings() {
         try {
             let response = await fetch("https://gateway.daft.ie/old/v1/listings", {
             "headers": {
@@ -81,7 +112,7 @@ class RentalBot{
                 "Referer": "https://www.daft.ie/",
                 "Referrer-Policy": "strict-origin-when-cross-origin"
             },
-            "body": `{\"section\":\"residential-to-rent\",\"filters\":[{\"values\":[\"published\"],\"name\":\"adState\"}],\"andFilters\":[],\"ranges\":[{\"from\":\"1200\",\"to\":\"2300\",\"name\":\"rentalPrice\"}],\"paging\":{\"from\":\"0\",\"pageSize\":\"${listingCount}\"},\"geoFilter\":{\"storedShapeIds\":[\"65\",\"66\",\"68\",\"70\",\"73\"],\"geoSearchType\":\"STORED_SHAPES\"},\"terms\":\"\",\"sort\":\"publishDateDesc\"}`,
+            "body": "{\"section\":\"residential-to-rent\",\"filters\":[{\"values\":[\"published\"],\"name\":\"adState\"}],\"andFilters\":[],\"ranges\":[{\"from\":\"\",\"to\":\"2300\",\"name\":\"rentalPrice\"}],\"paging\":{\"from\":\"0\",\"pageSize\":\"20\"},\"geoFilter\":{\"storedShapeIds\":[\"65\",\"66\",\"68\",\"70\",\"73\"],\"geoSearchType\":\"STORED_SHAPES\"},\"terms\":\"\",\"sort\":\"publishDateDesc\"}",
             "method": "POST"
             });
 
@@ -99,6 +130,83 @@ class RentalBot{
             return null;
         }
     }
+
+    async getPhotoAndSellInfo(flat) {
+        if (!fs.existsSync(`./photos/${flat.id}`)){
+            fs.mkdirSync(`./photos/${flat.id}`);
+        }
+
+        let address = flat['seoFriendlyPath'].slice(10, flat['seoFriendlyPath'].indexOf('/', 10))
+        let detailedFlatListing = await this.getDetailedListing(address, flat.id);
+        
+        if (detailedFlatListing.seller != null) {
+            let content = '';
+            for (const [p, val] of Object.entries(detailedFlatListing)) {
+                content += `${p}::`
+                if (typeof val == "object") {
+                    content += "\n"
+                    for (const [np, nval] of Object.entries(val)) {
+                        content += `    ${np}::${nval}\n`;
+                    }
+                } else {
+                    content += `${val}\n`;
+                }
+            }
+
+            await fsasync.appendFile(`./photos/${flat.id}/info`, content);
+        }
+
+        if (detailedFlatListing.media.totalImages > 0) {            
+            for (let i=0; i < detailedFlatListing.media.images.length; ++i) {
+                const imageSize = "size720x480";
+                const imageUrl = detailedFlatListing.media.images[i][imageSize];
+                await this.downloadImage(imageUrl, `photo${i}`, `./photos/${flat.id}`)
+            }
+        }
+    }
+
+    async getDetailedListing(flatName, flatId) {
+        try {
+            let response = await fetch(`https://www.daft.ie/_next/data/qXQq1ZphfrDofGxFSGiaj/property.json?address=${flatName}&id=${flatId}`)
+            if (!response.status >= 200 && !response.status < 300) {
+                throw new Error(`Request failed with response code: ${response.status}`)
+            }
+    
+            let htmlText = await response.text();
+            const buildId = htmlText.slice(htmlText.indexOf("buildId") + 10, htmlText.indexOf("buildId") + 31)
+    
+            response = await fetch(`https://www.daft.ie/_next/data/${buildId}/property.json?address=${flatName}&id=${flatId}`)
+    
+            if (!response.status >= 200 && !response.status < 300) {
+                throw new Error(`Request failed with response code: ${response.status}`)
+            }
+            let detailedListing = await response.json();
+            return detailedListing.pageProps.listing;
+    
+        } catch(err) {
+            console.log(`Could not get detailed listing for ${flatId}`);
+            console.error(err);
+            return null;
+        }
+    }
+
+    async downloadImage(imgUrl, saveName, saveRelPath=".") {
+        const _path = path.resolve(__dirname, saveRelPath, saveName)
+        const writer = fs.createWriteStream(_path)
+      
+        const response = await axios({
+          url: imgUrl,
+          method: 'GET',
+          responseType: 'stream',
+        })
+      
+        response.data.pipe(writer)
+      
+        return new Promise((resolve, reject) => {
+          writer.on('finish', resolve)
+          writer.on('error', reject)
+        })
+      }
 
     async sendEmailReply(listingId, listingTitle='') {
         try {
