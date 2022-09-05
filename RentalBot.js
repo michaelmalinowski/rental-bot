@@ -19,15 +19,11 @@ class RentalBot{
         this.replyEmail = null;
         this.replyMessage = null;
 
-<<<<<<< HEAD
         this.mostRecentFlatIds = [];
 
         if (!fs.existsSync(`photos`)){
             fs.mkdirSync(`photos/`);
         }
-=======
-        this.mostRecentFlatId = null;
->>>>>>> parent of b1d3758... Update filter logic
     }
 
     setReplyInfo(replyInfo) {
@@ -59,7 +55,6 @@ class RentalBot{
                 return true;
             }
 
-<<<<<<< HEAD
             if (this.mostRecentFlatIds.indexOf(flat.id) < 0) {
                 this.mostRecentFlatIds.push(flat.id);
                 console.log(`Adding ${flat.title} to recent flats`);
@@ -68,10 +63,6 @@ class RentalBot{
                     this.sendEmailReply(flat.id, flat.title);
                     this.getPhotoAndSellInfo(flat);
                 }
-=======
-            if (this.mostRecentFlatId == flat.id) {
-                return true;
->>>>>>> parent of b1d3758... Update filter logic
             }
             ++lastSeen;
         });
