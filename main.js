@@ -2,7 +2,7 @@ const RentalBot = require('./RentalBot');
 const replyInfo = {
     "name": "Michael Malinowski",
     "email": "mike.m7@hotmail.com",
-    "message": "Hi there,\\n\\nI am highly interested in your listing. I am looking to let for myself; Michael Malinowski, a 26-year-old male working as a software engineer. Alongside my partner, Gina Nguyen, a 26-year-old female studying medicine at UCD. In summary: two adults with zero dependents looking for a 1-2 year lease.\\n\\nWe are currently in Canada until September 5th due to a passing in Gina's family however our good friend can attend a viewing on my behalf (Aubrie Sowa: 087 117 6999).\\n\\nWe are happy to sign a lease remotely afterward, with the required deposit and first and last months' rent. Should you like to discuss further (ie. increased rent offer) via phone in the meantime, my number on Whatsapp is (Canada:+1) 647202875. \\n\\nAll my best,\\nMichael"
+    "message": "Hi there,\\n\\nI am highly interested in your listing. I am looking to let for myself; Michael Malinowski, a 26-year-old male working as a software engineer. Alongside my partner, Gina Nguyen, a 26-year-old female studying medicine at UCD. In summary: two adults with zero dependents looking for a 1-2 year lease.\\n\\nWe are available for a viewing anytime after September 5th. Please let us know via email or phone when viewings start. We are very eager to move forward with the letting process. Also let us know if you would need anything else from us.\\n\\nAll my best,\\nMichael"
 }
 
 

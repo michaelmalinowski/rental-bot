@@ -240,7 +240,7 @@ class RentalBot{
                     "Referer": "https://www.daft.ie/",
                     "Referrer-Policy": "strict-origin-when-cross-origin"
                 },
-                "body": `{\"adId\":${listingId},\"name\":\"${this.replyName}\",\"email\":\"${this.replyEmail}\",\"message\":\"${this.replyMessage}\"}`,
+                "body": `{\"adId\":${listingId},\"name\":\"${this.replyName}\",\"email\":\"${this.replyEmail}\",\"phone\":\"0871626395\",\"message\":\"${this.replyMessage}\"}`,
                 "method": "POST"
             }
             let response = await fetch("https://gateway.daft.ie/old/v1/reply", json)
